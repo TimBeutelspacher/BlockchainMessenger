@@ -50,17 +50,12 @@ contract Messenger {
         require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
-        //string memory allMessages;
         
         string memory output;
         string memory currentMessage;
         string memory currentAuthor;
         
         for(uint i = 0; i < chats[givenChatID].messageCounter; i++){
-            /*string memory currentMessages = allMessages;
-            address authorsAddress = chats[givenChatID].messages[i].author;
-            allMessages = currentMessages + chats[givenChatID].members[authorsAddress] + chats[givenChatID].messages[i];
-            */
             
             currentMessage = chats[givenChatID].messages[i].text;
             currentAuthor = addressToString(chats[givenChatID].messages[i].author);
