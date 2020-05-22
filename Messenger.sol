@@ -4,6 +4,7 @@ contract Messenger {
     
     uint chatCounter = 0;
     mapping(uint => chat) public chats;  
+    mapping(address => string) public users;
     
     struct message {
         string text;
@@ -28,8 +29,7 @@ contract Messenger {
     }
     
     function createMessage(uint givenChatID, string memory givenText) public {
-        // Chat kann auch ohne Member existieren wenn man Chats verlassen kann
-        require(chats[givenChatID].memberCounter != 0, "The given ChatID doens't exist yet!");
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
         message memory newMessage = message(givenText, msg.sender);
@@ -37,33 +37,29 @@ contract Messenger {
         chats[givenChatID].messageCounter += 1;
     }
     
-    function getLatestMessage(uint givenChatID) view public returns(string memory) {
-        require(chats[givenChatID].memberCounter != 0, "The given ChatID doens't exist yet!");
+    /*function getLatestMessage(uint givenChatID) view public returns(string memory) {
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
         return chats[givenChatID].messages[chats[givenChatID].messageCounter - 1].text;
-    }
+    }*/
     
     function getAllMessages(uint givenChatID) view public returns(string memory) {
-        require(chats[givenChatID].memberCounter != 0, "The given ChatID doens't exist yet!");
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
-        //string memory allMessages;
         
         string memory output;
         string memory currentMessage;
         string memory currentAuthor;
         
         for(uint i = 0; i < chats[givenChatID].messageCounter; i++){
-            /*string memory currentMessages = allMessages;
-            address authorsAddress = chats[givenChatID].messages[i].author;
-            allMessages = currentMessages + chats[givenChatID].members[authorsAddress] + chats[givenChatID].messages[i];
-            */
             
             currentMessage = chats[givenChatID].messages[i].text;
-            currentAuthor = addressToString(chats[givenChatID].messages[i].author);
+            //currentAuthor = addressToString(chats[givenChatID].messages[i].author);
+            currentAuthor = users[chats[givenChatID].messages[i].author];
             output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessage, '\n'));
             
         }
@@ -88,7 +84,7 @@ contract Messenger {
     }
     
     function addMember(uint givenChatID, address givenAddress) public {
-        require(chats[givenChatID].memberCounter != 0, "The given ChatID doens't exist yet!");
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         require(isInChat(givenChatID, givenAddress) == false, "The given Address is already in this Chat!");
         
@@ -112,8 +108,28 @@ contract Messenger {
     
     function leaveChat(uint givenChatID) public {
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        // Mappings können nicht gelöscht werden.
-        // chats[givenChatID].members[]
+         
+         uint memberIndex = 1;
+        
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            if(chats[givenChatID].members[memberIndex] == msg.sender){
+                
+                for(memberIndex; memberIndex < chats[givenChatID].memberCounter; memberIndex++){
+                    chats[givenChatID].members[memberIndex] = chats[givenChatID].members[memberIndex+1];
+                }
+                chats[givenChatID].members[memberIndex+1] = address(0);
+                break;
+            }
+            
+            memberIndex += 1;
+        }
+        
+        chats[givenChatID].memberCounter -= 1;
+    }
+    
+    function setNickname(string memory givenNickname) public {
+        users[msg.sender] = givenNickname;
+    
     }
     
 }
