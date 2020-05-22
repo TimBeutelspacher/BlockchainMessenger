@@ -112,6 +112,7 @@ contract Messenger {
          uint memberIndex = 1;
         
         while(memberIndex <= chats[givenChatID].memberCounter) {
+
             if(chats[givenChatID].members[memberIndex] == msg.sender){
                 
                 for(memberIndex; memberIndex < chats[givenChatID].memberCounter; memberIndex++){
@@ -129,7 +130,6 @@ contract Messenger {
     
     function setNickname(string memory givenNickname) public {
         users[msg.sender] = givenNickname;
-    
     }
     
 }
