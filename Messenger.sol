@@ -112,9 +112,13 @@ contract Messenger {
          uint memberIndex = 1;
         
         while(memberIndex <= chats[givenChatID].memberCounter) {
-            
+
             if(chats[givenChatID].members[memberIndex] == msg.sender){
-                chats[givenChatID].members[memberIndex] = address(0);
+                
+                for(memberIndex; memberIndex < chats[givenChatID].memberCounter; memberIndex++){
+                    chats[givenChatID].members[memberIndex] = chats[givenChatID].members[memberIndex+1];
+                }
+                chats[givenChatID].members[memberIndex+1] = address(0);
                 break;
             }
             
@@ -125,9 +129,7 @@ contract Messenger {
     }
     
     function setNickname(string memory givenNickname) public {
-        
         users[msg.sender] = givenNickname;
-        
     }
     
 }
