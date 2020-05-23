@@ -26,7 +26,7 @@ contract Messenger {
 
     function createPublicChat() public{
         
-        chat memory newChat = chat(chatCounter,true,0,1);
+        chat memory newChat = chat(chatCounter,true,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         
@@ -35,7 +35,7 @@ contract Messenger {
     
     function createPrivateChat() public {
        
-        chat memory newChat = chat(chatCounter,false,0,1);
+        chat memory newChat = chat(chatCounter,false,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
