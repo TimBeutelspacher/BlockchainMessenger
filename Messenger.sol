@@ -1,11 +1,11 @@
-pragma solidity > 0.4.24;
+pragma solidity >=0.4.0 <0.7.0;
 
 
 contract Messenger {
     
     uint chatCounter = 0;
     mapping(uint => chat) public chats;  
-    mapping(address => string) public users;
+    mapping(address => string) private users;
     
     struct message {
         string text;
@@ -17,10 +17,13 @@ contract Messenger {
         bool isPublic;
         uint messageCounter;
         uint memberCounter;
+        uint adminCounter;
         mapping(uint => message) messages;
         mapping(uint => address) members;
+        mapping(uint => address) admins;
     }
     
+
     function createPublicChat() public{
         
         chat memory newChat = chat(chatCounter,true,0,1);
@@ -35,6 +38,7 @@ contract Messenger {
         chat memory newChat = chat(chatCounter,false,0,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
+        chats[chatCounter].admins[1] = msg.sender;
         
         chatCounter += 1;
     }
@@ -47,14 +51,6 @@ contract Messenger {
         chats[givenChatID].messages[chats[givenChatID].messageCounter] = newMessage;
         chats[givenChatID].messageCounter += 1;
     }
-    
-    /*function getLatestMessage(uint givenChatID) view public returns(string memory) {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        
-        return chats[givenChatID].messages[chats[givenChatID].messageCounter - 1].text;
-    }*/
     
     function getAllMessages(uint givenChatID) view public returns(string memory) {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
@@ -77,26 +73,8 @@ contract Messenger {
             }
             
             output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessage, '\n'));
-            
         }
-        
         return output;
-    }
-    
-    function isInChat(uint givenChatID, address givenAuthor) view internal returns(bool isMember) {
-        
-        uint memberIndex = 1;
-        
-        while(memberIndex <= chats[givenChatID].memberCounter) {
-            
-            if(chats[givenChatID].members[memberIndex] == givenAuthor){
-                return true;
-            }
-            
-            memberIndex += 1;
-        }
-        
-        return false;
     }
     
     function addMember(uint givenChatID, address givenAddress) public {
@@ -122,26 +100,44 @@ contract Messenger {
         return string(str);
     }
     
+    //Funktion um einen Chat zu verlassen.
     function leaveChat(uint givenChatID) public {
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-         
-         uint memberIndex = 1;
         
+        //Mitglied wird aus dem Mapping der Mitglieder entfernt.
+        uint memberIndex = 1;
         while(memberIndex <= chats[givenChatID].memberCounter) {
-
             if(chats[givenChatID].members[memberIndex] == msg.sender){
-                
                 for(memberIndex; memberIndex < chats[givenChatID].memberCounter; memberIndex++){
                     chats[givenChatID].members[memberIndex] = chats[givenChatID].members[memberIndex+1];
                 }
+                chats[givenChatID].memberCounter -= 1;
                 chats[givenChatID].members[memberIndex+1] = address(0);
                 break;
             }
-            
             memberIndex += 1;
         }
         
-        chats[givenChatID].memberCounter -= 1;
+        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Mapping gelöscht.
+        uint adminIndex = 1;
+        while(adminIndex <= chats[givenChatID].adminCounter) {
+            if(chats[givenChatID].admins[adminIndex] == msg.sender){
+                for(adminIndex; adminIndex < chats[givenChatID].adminCounter; adminIndex++){
+                    chats[givenChatID].admins[adminIndex] = chats[givenChatID].admins[adminIndex+1];
+                }
+                chats[givenChatID].adminCounter -= 1;
+                chats[givenChatID].admins[adminIndex] = address(0);
+                break;
+            }
+        adminIndex += 1;
+        }
+        
+        //Falls es keinen Admin mehr gibt soll das älteste Mitglied Admin werden.
+        if(chats[givenChatID].adminCounter < 1 && chats[givenChatID].memberCounter >= 1){
+            chats[givenChatID].admins[1] = chats[givenChatID].members[1];
+            chats[givenChatID].adminCounter = 1;
+        }
     }
     
     function joinPublicChat(uint givenChatID) public{
@@ -157,4 +153,78 @@ contract Messenger {
         users[msg.sender] = givenNickname;
     }
     
+    //Funktion um ein Mitglied zu einem Admin eines Chats zu machen.
+    function upgradeMemberToAdmin(uint givenChatID, address givenAddress) public {
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+        require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
+        require(isAdminOfChat(givenChatID, givenAddress) == false, "The given Address is already a Admin!");
+        require(isInChat(givenChatID, givenAddress), "The given Address isn't a member of this chat!"); 
+        
+        chats[givenChatID].adminCounter += 1;
+        chats[givenChatID].admins[chats[givenChatID].adminCounter] = givenAddress;
+    }
+    
+    //Funktion zum entfernen eines Miglieds aus einem Chat.
+    function removeMemberFromChat(uint givenChatID, address givenAddress) public{
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+        require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
+        require(isInChat(givenChatID, givenAddress), "The given Address isn't a member of this chat!");
+        
+        //Mitglied wird aus dem Mapping der Mitglieder entfernt.
+        uint memberIndex = 1;
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            if(chats[givenChatID].members[memberIndex] == givenAddress){
+                for(memberIndex; memberIndex < chats[givenChatID].memberCounter; memberIndex++){
+                    chats[givenChatID].members[memberIndex] = chats[givenChatID].members[memberIndex+1];
+                }
+                chats[givenChatID].memberCounter -= 1;
+                chats[givenChatID].members[memberIndex+1] = address(0);
+                break;
+            }
+            memberIndex += 1;
+        }
+        
+        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Mapping gelöscht.
+        uint adminIndex = 1;
+        while(adminIndex <= chats[givenChatID].adminCounter) {
+            if(chats[givenChatID].admins[adminIndex] == givenAddress){
+                for(adminIndex; adminIndex < chats[givenChatID].adminCounter; adminIndex++){
+                    chats[givenChatID].admins[adminIndex] = chats[givenChatID].admins[adminIndex+1];
+                }
+                chats[givenChatID].adminCounter -= 1;
+                chats[givenChatID].admins[adminIndex] = address(0);
+                break;
+            }
+        adminIndex += 1;
+        }
+    }
+    
+    //Überprüfung ob ein Mitglied ein Admin ist.
+    function isAdminOfChat(uint givenChatID, address givenMember) view internal returns (bool isAdmin){
+        require(isInChat(givenChatID, givenMember));
+        
+        uint adminIndex = 1;
+        while(adminIndex <= chats[givenChatID].adminCounter) {
+            if(chats[givenChatID].admins[adminIndex] == givenMember){
+                return true;
+            }
+            adminIndex += 1;
+        }
+        return false;
+    }
+    
+    //Überprüfung ob eine Adresse Mitglied eines Chats ist.
+    function isInChat(uint givenChatID, address givenMember) view internal returns(bool isMember) {
+        
+        uint memberIndex = 1;
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            if(chats[givenChatID].members[memberIndex] == givenMember){
+                return true;
+            }
+            memberIndex += 1;
+        }
+        return false;
+    }
 }
