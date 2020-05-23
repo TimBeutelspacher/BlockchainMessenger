@@ -1,8 +1,8 @@
 # BlockchainMessenger
 
 Weitere Ideen:
-- (umgesetzt) Der Kick Modus (Admin soll Mitglieder rauswerfen können).
-- (umgesetzt) Mitglieder zu Admins machen.
+- (Umgesetzt) Der Kick Modus (Admin soll Mitglieder rauswerfen können).
+- (Umgesetzt) Mitglieder zu Admins machen.
 - Einen Struct für den User mit den Attributen Nickname und Adresse erzeugen.
 - Gruppenübersicht
     - Pro Gruppe -> Nicknamen und Adressen der Mitglieder.
