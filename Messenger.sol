@@ -1,5 +1,6 @@
 pragma solidity > 0.4.24;
 
+
 contract Messenger {
     
     uint chatCounter = 0;
@@ -58,8 +59,13 @@ contract Messenger {
         for(uint i = 0; i < chats[givenChatID].messageCounter; i++){
             
             currentMessage = chats[givenChatID].messages[i].text;
-            //currentAuthor = addressToString(chats[givenChatID].messages[i].author);
+            
             currentAuthor = users[chats[givenChatID].messages[i].author];
+            
+            if(keccak256(abi.encodePacked((currentAuthor))) == keccak256(abi.encodePacked(("")))){
+                currentAuthor = addressToString(chats[givenChatID].messages[i].author);
+            }
+            
             output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessage, '\n'));
             
         }
