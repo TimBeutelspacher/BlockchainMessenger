@@ -272,6 +272,31 @@ contract Messenger {
         }
         
         return output;
+    }
+    
+    function getMembersOfChat(uint givenChatID) view public returns(string memory){
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+        
+        uint memberIndex = 1;
+        string memory output = "";
+        string memory currentNickname;
+        string memory currentAddress;
+        
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            
+            currentAddress = addressToString(chats[givenChatID].members[memberIndex]);
+            
+            currentNickname = users[chats[givenChatID].members[memberIndex]];
+            
+            if(keccak256(abi.encodePacked((currentNickname))) == keccak256(abi.encodePacked(("")))){
+                currentNickname = "NoName";
+            }
+            
+            output = string(abi.encodePacked(output, currentAddress, " (", currentNickname ,") | "));
+            memberIndex += 1;
+        }
+        return output;
         
     }
     
