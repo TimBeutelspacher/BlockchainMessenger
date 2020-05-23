@@ -14,6 +14,7 @@ contract Messenger {
     
     struct chat {
         uint chatID;
+        bool isPublic;
         uint messageCounter;
         uint memberCounter;
         uint adminCounter;
@@ -22,8 +23,19 @@ contract Messenger {
         mapping(uint => address) admins;
     }
     
-    function createChat() public {
-        chat memory newChat = chat(chatCounter,0,1,1);
+
+    function createPublicChat() public{
+        
+        chat memory newChat = chat(chatCounter,true,0,1);
+        chats[chatCounter] = newChat;
+        chats[chatCounter].members[1] = msg.sender;
+        
+        chatCounter += 1;
+    }
+    
+    function createPrivateChat() public {
+       
+        chat memory newChat = chat(chatCounter,false,0,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
@@ -126,6 +138,15 @@ contract Messenger {
             chats[givenChatID].admins[1] = chats[givenChatID].members[1];
             chats[givenChatID].adminCounter = 1;
         }
+    }
+    
+    function joinPublicChat(uint givenChatID) public{
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        require(chats[givenChatID].isPublic, "This chat is not public!");
+        require(isInChat(givenChatID, msg.sender) == false, "You are already in this chat!");
+        
+        chats[givenChatID].memberCounter += 1;
+        chats[givenChatID].members[chats[givenChatID].memberCounter] = msg.sender;
     }
     
     function setNickname(string memory givenNickname) public {
