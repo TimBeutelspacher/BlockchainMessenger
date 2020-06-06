@@ -3,9 +3,16 @@ pragma solidity >=0.4.0 <0.7.0;
 
 contract Messenger {
     
+    /*
+        Globale Variablen
+    */
     uint chatCounter = 0;
     mapping(uint => chat) public chats;  
     mapping(address => string) private users;
+    
+    /*
+        Objekt-Strukturen
+    */
     
     struct message {
         string text;
@@ -23,7 +30,11 @@ contract Messenger {
         mapping(uint => address) admins;
     }
     
-
+    /*
+        Funktionen
+    */
+    
+    // Funktion um einen öffentlichen Chat zu erstellen
     function createPublicChat() public{
         
         chat memory newChat = chat(chatCounter,true,0,1,1);
@@ -33,6 +44,7 @@ contract Messenger {
         chatCounter += 1;
     }
     
+    // Funktion um einen privaten Chat zu erstellen
     function createPrivateChat() public {
        
         chat memory newChat = chat(chatCounter,false,0,1,1);
@@ -43,6 +55,7 @@ contract Messenger {
         chatCounter += 1;
     }
     
+    // Funktion um eine Nachricht in einem Chat zu erstellen
     function createMessage(uint givenChatID, string memory givenText) public {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
@@ -52,6 +65,7 @@ contract Messenger {
         chats[givenChatID].messageCounter += 1;
     }
     
+    // Funktion um alle Nachrichten geordnet aus einem Chat auszulesen
     function getAllMessages(uint givenChatID) view public returns(string memory) {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
@@ -77,6 +91,7 @@ contract Messenger {
         return output;
     }
     
+    // Funktion um einem Chat ein Mitglied hinzuzufügen
     function addMember(uint givenChatID, address givenAddress) public {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
@@ -86,6 +101,7 @@ contract Messenger {
         chats[givenChatID].members[chats[givenChatID].memberCounter] = givenAddress;
     }
     
+    // Funktion um aus einer Adresse einen String zu produzieren
     function addressToString(address _addr) private pure returns(string memory) {
         bytes32 value = bytes32(uint256(_addr));
         bytes memory alphabet = "0123456789abcdef";
@@ -140,6 +156,7 @@ contract Messenger {
         }
     }
     
+    // Funktion um einem öffentlichen Chat beizutreten
     function joinPublicChat(uint givenChatID) public{
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(chats[givenChatID].isPublic, "This chat is not public!");
@@ -149,6 +166,7 @@ contract Messenger {
         chats[givenChatID].members[chats[givenChatID].memberCounter] = msg.sender;
     }
     
+    // Funktion um einen Nicknamen zu setzen
     function setNickname(string memory givenNickname) public {
         users[msg.sender] = givenNickname;
     }
@@ -226,5 +244,79 @@ contract Messenger {
             memberIndex += 1;
         }
         return false;
+    }
+    
+    // Funktion um alle Chats eines Nutzers auszugeben
+    function getMyChats() view public returns(string memory){
+        
+        string memory output = "";
+        
+        for(uint i = 0; i < chatCounter; i++){
+            if(isInChat(i,msg.sender)){
+                
+                if(chats[i].isPublic){
+                    output = string(abi.encodePacked(output, "(public) "));
+                }
+                else{
+                    output = string(abi.encodePacked(output, "(private) "));
+                }
+                
+                 output = string(abi.encodePacked(output, "ChatID: ", uint2str(i), " | "));
+                 output = string(abi.encodePacked(output, "\n"));
+                
+            }
+        }
+        
+        if(keccak256(abi.encodePacked((output))) == keccak256(abi.encodePacked(("")))){
+            output = "You are in no group yet!";
+        }
+        
+        return output;
+    }
+    
+    function getMembersOfChat(uint givenChatID) view public returns(string memory){
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+        
+        uint memberIndex = 1;
+        string memory output = "";
+        string memory currentNickname;
+        string memory currentAddress;
+        
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            
+            currentAddress = addressToString(chats[givenChatID].members[memberIndex]);
+            
+            currentNickname = users[chats[givenChatID].members[memberIndex]];
+            
+            if(keccak256(abi.encodePacked((currentNickname))) == keccak256(abi.encodePacked(("")))){
+                currentNickname = "NoName";
+            }
+            
+            output = string(abi.encodePacked(output, currentAddress, " (", currentNickname ,") | "));
+            memberIndex += 1;
+        }
+        return output;
+        
+    }
+    
+    // Funktion um aus einem uint einen String zu produzieren
+    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint j = _i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint k = len - 1;
+        while (_i != 0) {
+            bstr[k--] = byte(uint8(48 + _i % 10));
+            _i /= 10;
+        }
+        return string(bstr);
     }
 }
