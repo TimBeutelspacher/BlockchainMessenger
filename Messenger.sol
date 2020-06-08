@@ -330,13 +330,13 @@ contract Messenger {
     }
     
     
-    function isCertified() view public returns (bool) {
+    function isCertified(address givenAddress) view public returns (bool) {
         
-        return users[msg.sender].isCertified;
+        return users[givenAddress].isCertified;
         
     }
     
-    function certifyUser() public {
+    function certifyUser() internal {
         
         users[msg.sender].isCertified = true;
         
