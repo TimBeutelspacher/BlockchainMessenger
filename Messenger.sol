@@ -8,11 +8,16 @@ contract Messenger {
     */
     uint chatCounter = 0;
     mapping(uint => chat) public chats;  
-    mapping(address => string) private users;
+    mapping(address => user) private users;
     
     /*
         Objekt-Strukturen
     */
+    
+    struct user{
+        string nickname;
+        bool isCertified;
+    }
     
     struct message {
         string text;
@@ -60,6 +65,10 @@ contract Messenger {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
+        if(givenChatID == 0 && keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked(("Currywurst")))) {
+            certifyUser();
+        }
+        
         message memory newMessage = message(givenText, msg.sender);
         chats[givenChatID].messages[chats[givenChatID].messageCounter] = newMessage;
         chats[givenChatID].messageCounter += 1;
@@ -80,7 +89,7 @@ contract Messenger {
             
             currentMessage = chats[givenChatID].messages[i].text;
             
-            currentAuthor = users[chats[givenChatID].messages[i].author];
+            currentAuthor = users[chats[givenChatID].messages[i].author].nickname;
             
             if(keccak256(abi.encodePacked((currentAuthor))) == keccak256(abi.encodePacked(("")))){
                 currentAuthor = addressToString(chats[givenChatID].messages[i].author);
@@ -168,7 +177,7 @@ contract Messenger {
     
     // Funktion um einen Nicknamen zu setzen
     function setNickname(string memory givenNickname) public {
-        users[msg.sender] = givenNickname;
+        users[msg.sender].nickname = givenNickname;
     }
     
     //Funktion um ein Mitglied zu einem Admin eines Chats zu machen.
@@ -287,7 +296,7 @@ contract Messenger {
             
             currentAddress = addressToString(chats[givenChatID].members[memberIndex]);
             
-            currentNickname = users[chats[givenChatID].members[memberIndex]];
+            currentNickname = users[chats[givenChatID].members[memberIndex]].nickname;
             
             if(keccak256(abi.encodePacked((currentNickname))) == keccak256(abi.encodePacked(("")))){
                 currentNickname = "NoName";
@@ -319,4 +328,18 @@ contract Messenger {
         }
         return string(bstr);
     }
+    
+    
+    function isCertified() view public returns (bool) {
+        
+        return users[msg.sender].isCertified;
+        
+    }
+    
+    function certifyUser() public {
+        
+        users[msg.sender].isCertified = true;
+        
+    }
+    
 }
