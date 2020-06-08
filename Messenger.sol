@@ -45,6 +45,7 @@ contract Messenger {
         chat memory newChat = chat(chatCounter,true,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
+        chats[chatCounter].admins[1] = msg.sender;
         
         chatCounter += 1;
     }
