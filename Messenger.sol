@@ -7,8 +7,9 @@ contract Messenger {
         Globale Variablen
     */
     uint chatCounter = 0;
-    mapping(uint => chat) public chats;  
-    mapping(address => user) private users;
+    mapping(uint => chat) internal chats;  
+    mapping(address => user) public users;
+    string private keyword= "Currywurst";
     
     /*
         Objekt-Strukturen
@@ -16,7 +17,10 @@ contract Messenger {
     
     struct user{
         string nickname;
-        bool isCertified;
+        bool messageCertified;
+        bool createChatCertified;
+        bool joinChatCertified;
+        bool nicknameCertified;
     }
     
     struct message {
@@ -26,7 +30,6 @@ contract Messenger {
     
     struct chat {
         uint chatID;
-        bool isPublic;
         uint messageCounter;
         uint memberCounter;
         uint adminCounter;
@@ -40,34 +43,31 @@ contract Messenger {
     */
     
     // Funktion um einen öffentlichen Chat zu erstellen
-    function createPublicChat() public{
+    function createChat() public{
         
-        chat memory newChat = chat(chatCounter,true,0,1,1);
+        chat memory newChat = chat(chatCounter,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
+        
+        users[msg.sender].createChatCertified = true;
+        
+        
+        if(chatCounter == 0){
+            users[msg.sender].joinChatCertified = true;
+        }
         
         chatCounter += 1;
     }
     
-    // Funktion um einen privaten Chat zu erstellen
-    function createPrivateChat() public {
-       
-        chat memory newChat = chat(chatCounter,false,0,1,1);
-        chats[chatCounter] = newChat;
-        chats[chatCounter].members[1] = msg.sender;
-        chats[chatCounter].admins[1] = msg.sender;
-        
-        chatCounter += 1;
-    }
     
     // Funktion um eine Nachricht in einem Chat zu erstellen
     function createMessage(uint givenChatID, string memory givenText) public {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         
-        if(givenChatID == 0 && keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked(("Currywurst")))) {
-            certifyUser();
+        if(keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked((keyword)))) {
+            users[msg.sender].messageCertified = true;
         }
         
         message memory newMessage = message(givenText, msg.sender);
@@ -102,7 +102,7 @@ contract Messenger {
     }
     
     // Funktion um einem Chat ein Mitglied hinzuzufügen
-    function addMember(uint givenChatID, address givenAddress) public {
+    function addMember(uint givenChatID, address givenAddress) internal {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         require(isInChat(givenChatID, givenAddress) == false, "The given Address is already in this Chat!");
@@ -112,7 +112,7 @@ contract Messenger {
     }
     
     // Funktion um aus einer Adresse einen String zu produzieren
-    function addressToString(address _addr) private pure returns(string memory) {
+    function addressToString(address _addr) internal pure returns(string memory) {
         bytes32 value = bytes32(uint256(_addr));
         bytes memory alphabet = "0123456789abcdef";
     
@@ -167,10 +167,13 @@ contract Messenger {
     }
     
     // Funktion um einem öffentlichen Chat beizutreten
-    function joinPublicChat(uint givenChatID) public{
+    function joinChat(uint givenChatID) public{
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(chats[givenChatID].isPublic, "This chat is not public!");
         require(isInChat(givenChatID, msg.sender) == false, "You are already in this chat!");
+        
+        if(givenChatID == 0){
+            users[msg.sender].joinChatCertified = true;
+        }
         
         chats[givenChatID].memberCounter += 1;
         chats[givenChatID].members[chats[givenChatID].memberCounter] = msg.sender;
@@ -179,10 +182,12 @@ contract Messenger {
     // Funktion um einen Nicknamen zu setzen
     function setNickname(string memory givenNickname) public {
         users[msg.sender].nickname = givenNickname;
+        
+        users[msg.sender].nicknameCertified = true;
     }
     
     //Funktion um ein Mitglied zu einem Admin eines Chats zu machen.
-    function upgradeMemberToAdmin(uint givenChatID, address givenAddress) public {
+    function upgradeMemberToAdmin(uint givenChatID, address givenAddress) internal {
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
@@ -194,7 +199,7 @@ contract Messenger {
     }
     
     //Funktion zum entfernen eines Miglieds aus einem Chat.
-    function removeMemberFromChat(uint givenChatID, address givenAddress) public{
+    function removeMemberFromChat(uint givenChatID, address givenAddress) internal{
         require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
         require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
         require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
@@ -264,13 +269,6 @@ contract Messenger {
         for(uint i = 0; i < chatCounter; i++){
             if(isInChat(i,msg.sender)){
                 
-                if(chats[i].isPublic){
-                    output = string(abi.encodePacked(output, "(public) "));
-                }
-                else{
-                    output = string(abi.encodePacked(output, "(private) "));
-                }
-                
                  output = string(abi.encodePacked(output, "ChatID: ", uint2str(i), " | "));
                  output = string(abi.encodePacked(output, "\n"));
                 
@@ -331,15 +329,43 @@ contract Messenger {
     }
     
     
-    function isCertified(address givenAddress) view public returns (bool) {
+    function isCertified(address givenAddress) view public returns (string memory) {
         
-        return users[givenAddress].isCertified;
+        
+        if(users[givenAddress].createChatCertified == true && users[givenAddress].joinChatCertified == true && users[givenAddress].messageCertified == true && users[givenAddress].nicknameCertified == true){
+            return "Congratulations! You completed all tasks.";
+        }
+        
+        return "You still have at least one task to do. Check the progress at 'users' by entering your address.";
+    }
+    
+    
+    function getProgress() pure internal returns (string memory) {
+        
+        string memory output = "";
+        
+        /*if(isCertified(msg.sender) == true){
+            output = "Congratulations! You completed all tasks.";
+        }
+        else{
+            output = "Fortschritt: \n";
+            output = string(abi.encodePacked(output, "Create chat 0: ", getBool(users[msg.sender].createChatCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Join chat 0: ", getBool(users[msg.sender].joinChatCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Create message in chat 0: ", getBool(users[msg.sender].messageCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Set nickname: ", getBool(users[msg.sender].nicknameCertified)));
+        }
+        */
+        return output;
         
     }
     
-    function certifyUser() internal {
+    function getBool(bool keyBool) pure internal returns (string memory) {
         
-        users[msg.sender].isCertified = true;
+        if(keyBool){
+            return "Done!";
+        }
+        
+            return "To do.";
         
     }
     
