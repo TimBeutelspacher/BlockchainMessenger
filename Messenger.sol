@@ -22,6 +22,11 @@ contract Messenger {
         bool nicknameCertified;
     }
     
+    struct user{
+        string nickname;
+        bool isCertified;
+    }
+    
     struct message {
         string text;
         address author;
@@ -43,7 +48,6 @@ contract Messenger {
     
     // Funktion um einen öffentlichen Chat zu erstellen
     function createChat() public{
-        
         chat memory newChat = chat(chatCounter,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
@@ -58,7 +62,7 @@ contract Messenger {
         if((keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked((keyword)))) && (givenChatID == 0)) {
             users[msg.sender].messageCertified = true;
         }
-
+        
         message memory newMessage = message(givenText, msg.sender);
         chats[givenChatID].messages[chats[givenChatID].messageCounter] = newMessage;
         chats[givenChatID].messageCounter += 1;
@@ -314,7 +318,6 @@ contract Messenger {
         return string(bstr);
     }
     
-    
     function getProgress() pure internal returns (string memory) {
         
         string memory output = "";
@@ -331,7 +334,6 @@ contract Messenger {
         }
         */
         return output;
-        
     }
     
     function getBool(bool keyBool) pure internal returns (string memory) {
