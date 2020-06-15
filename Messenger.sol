@@ -7,12 +7,20 @@ contract Messenger {
         Globale Variablen
     */
     uint chatCounter = 0;
-    mapping(uint => chat) public chats;  
-    mapping(address => user) private users;
+    mapping(uint => chat) internal chats;  
+    mapping(address => user) public users;
+    string private keyword = "Currywurst";
     
     /*
         Objekt-Strukturen
     */
+    struct user{
+        string nickname;
+        bool messageCertified;
+        bool createChatCertified;
+        bool joinChatCertified;
+        bool nicknameCertified;
+    }
     
     struct user{
         string nickname;
@@ -26,7 +34,6 @@ contract Messenger {
     
     struct chat {
         uint chatID;
-        bool isPublic;
         uint messageCounter;
         uint memberCounter;
         uint adminCounter;
@@ -40,34 +47,20 @@ contract Messenger {
     */
     
     // Funktion um einen öffentlichen Chat zu erstellen
-    function createPublicChat() public{
-        
-        chat memory newChat = chat(chatCounter,true,0,1,1);
+    function createChat() public{
+        chat memory newChat = chat(chatCounter,0,1,1);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
         
-        chatCounter += 1;
-    }
-    
-    // Funktion um einen privaten Chat zu erstellen
-    function createPrivateChat() public {
-       
-        chat memory newChat = chat(chatCounter,false,0,1,1);
-        chats[chatCounter] = newChat;
-        chats[chatCounter].members[1] = msg.sender;
-        chats[chatCounter].admins[1] = msg.sender;
-        
+        users[msg.sender].createChatCertified = true;
         chatCounter += 1;
     }
     
     // Funktion um eine Nachricht in einem Chat zu erstellen
-    function createMessage(uint givenChatID, string memory givenText) public {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        
-        if(givenChatID == 0 && keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked(("Currywurst")))) {
-            certifyUser();
+    function createMessage(uint givenChatID, string memory givenText) public modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender){
+        if((keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked((keyword)))) && (givenChatID == 0)) {
+            users[msg.sender].messageCertified = true;
         }
         
         message memory newMessage = message(givenText, msg.sender);
@@ -76,11 +69,8 @@ contract Messenger {
     }
     
     // Funktion um alle Nachrichten geordnet aus einem Chat auszulesen
-    function getAllMessages(uint givenChatID) view public returns(string memory) {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+    function getAllMessages(uint givenChatID) public view modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender) returns(string memory){
         require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        
         
         string memory output;
         string memory currentMessage;
@@ -102,34 +92,14 @@ contract Messenger {
     }
     
     // Funktion um einem Chat ein Mitglied hinzuzufügen
-    function addMember(uint givenChatID, address givenAddress) public {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        require(isInChat(givenChatID, givenAddress) == false, "The given Address is already in this Chat!");
-        
+    function addMember(uint givenChatID, address givenAddress) internal modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender)
+        modMemberOfChat(givenChatID, givenAddress){
         chats[givenChatID].memberCounter += 1;
         chats[givenChatID].members[chats[givenChatID].memberCounter] = givenAddress;
     }
     
-    // Funktion um aus einer Adresse einen String zu produzieren
-    function addressToString(address _addr) private pure returns(string memory) {
-        bytes32 value = bytes32(uint256(_addr));
-        bytes memory alphabet = "0123456789abcdef";
-    
-        bytes memory str = new bytes(42);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < 20; i++) {
-            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
-        }
-        return string(str);
-    }
-    
     //Funktion um einen Chat zu verlassen.
-    function leaveChat(uint givenChatID) public {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+    function leaveChat(uint givenChatID) public modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender){
         
         //Mitglied wird aus dem Mapping der Mitglieder entfernt.
         uint memberIndex = 1;
@@ -145,7 +115,7 @@ contract Messenger {
             memberIndex += 1;
         }
         
-        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Mapping gelöscht.
+        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Admin-Mapping gelöscht.
         uint adminIndex = 1;
         while(adminIndex <= chats[givenChatID].adminCounter) {
             if(chats[givenChatID].admins[adminIndex] == msg.sender){
@@ -167,10 +137,12 @@ contract Messenger {
     }
     
     // Funktion um einem öffentlichen Chat beizutreten
-    function joinPublicChat(uint givenChatID) public{
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(chats[givenChatID].isPublic, "This chat is not public!");
+    function joinChat(uint givenChatID) public modChatID(givenChatID){
         require(isInChat(givenChatID, msg.sender) == false, "You are already in this chat!");
+        
+        if(givenChatID == 0){
+            users[msg.sender].joinChatCertified = true;
+        }
         
         chats[givenChatID].memberCounter += 1;
         chats[givenChatID].members[chats[givenChatID].memberCounter] = msg.sender;
@@ -179,26 +151,20 @@ contract Messenger {
     // Funktion um einen Nicknamen zu setzen
     function setNickname(string memory givenNickname) public {
         users[msg.sender].nickname = givenNickname;
+        users[msg.sender].nicknameCertified = true;
     }
     
     //Funktion um ein Mitglied zu einem Admin eines Chats zu machen.
-    function upgradeMemberToAdmin(uint givenChatID, address givenAddress) public {
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
-        require(isAdminOfChat(givenChatID, givenAddress) == false, "The given Address is already a Admin!");
-        require(isInChat(givenChatID, givenAddress), "The given Address isn't a member of this chat!"); 
-        
+    function upgradeMemberToAdmin(uint givenChatID, address givenAddress) internal modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender)
+        modAdminOfChat(givenChatID, msg.sender) modAdminOfChat(givenChatID, givenAddress) modMemberOfChat(givenChatID, givenAddress){
+            
         chats[givenChatID].adminCounter += 1;
         chats[givenChatID].admins[chats[givenChatID].adminCounter] = givenAddress;
     }
     
     //Funktion zum entfernen eines Miglieds aus einem Chat.
-    function removeMemberFromChat(uint givenChatID, address givenAddress) public{
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
-        require(isInChat(givenChatID, givenAddress), "The given Address isn't a member of this chat!");
+    function removeMemberFromChat(uint givenChatID, address givenAddress) internal modChatID(givenChatID) 
+        modMemberOfChat(givenChatID, msg.sender) modAdminOfChat(givenChatID, msg.sender) modMemberOfChat(givenChatID, givenAddress){
         
         //Mitglied wird aus dem Mapping der Mitglieder entfernt.
         uint memberIndex = 1;
@@ -214,7 +180,7 @@ contract Messenger {
             memberIndex += 1;
         }
         
-        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Mapping gelöscht.
+        //Falls das Mitglied ein Admin ist wird dieser Eintrag im Admin-Mapping gelöscht.
         uint adminIndex = 1;
         while(adminIndex <= chats[givenChatID].adminCounter) {
             if(chats[givenChatID].admins[adminIndex] == givenAddress){
@@ -229,33 +195,6 @@ contract Messenger {
         }
     }
     
-    //Überprüfung ob ein Mitglied ein Admin ist.
-    function isAdminOfChat(uint givenChatID, address givenMember) view internal returns (bool isAdmin){
-        require(isInChat(givenChatID, givenMember));
-        
-        uint adminIndex = 1;
-        while(adminIndex <= chats[givenChatID].adminCounter) {
-            if(chats[givenChatID].admins[adminIndex] == givenMember){
-                return true;
-            }
-            adminIndex += 1;
-        }
-        return false;
-    }
-    
-    //Überprüfung ob eine Adresse Mitglied eines Chats ist.
-    function isInChat(uint givenChatID, address givenMember) view internal returns(bool isMember) {
-        
-        uint memberIndex = 1;
-        while(memberIndex <= chats[givenChatID].memberCounter) {
-            if(chats[givenChatID].members[memberIndex] == givenMember){
-                return true;
-            }
-            memberIndex += 1;
-        }
-        return false;
-    }
-    
     // Funktion um alle Chats eines Nutzers auszugeben
     function getMyChats() view public returns(string memory){
         
@@ -264,16 +203,8 @@ contract Messenger {
         for(uint i = 0; i < chatCounter; i++){
             if(isInChat(i,msg.sender)){
                 
-                if(chats[i].isPublic){
-                    output = string(abi.encodePacked(output, "(public) "));
-                }
-                else{
-                    output = string(abi.encodePacked(output, "(private) "));
-                }
-                
                  output = string(abi.encodePacked(output, "ChatID: ", uint2str(i), " | "));
                  output = string(abi.encodePacked(output, "\n"));
-                
             }
         }
         
@@ -283,11 +214,9 @@ contract Messenger {
         
         return output;
     }
-    
-    function getMembersOfChat(uint givenChatID) view public returns(string memory){
-        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
-        require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
-        
+
+    //Funktion um alle Adressen und Nicknamen der Chatmitglieder auszugeben.
+    function getMembersOfChat(uint givenChatID) internal view modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender) returns(string memory){
         uint memberIndex = 1;
         string memory output = "";
         string memory currentNickname;
@@ -307,7 +236,66 @@ contract Messenger {
             memberIndex += 1;
         }
         return output;
+    }
+    
+    //Funktion, welche den Fortschritt der Zertifizierungsaufgaben einer Adresse ausgibt.
+    function checkCertificationProgress(address givenAddress) view public returns (string memory) {
+        uint counter = 0;
         
+        if(users[givenAddress].createChatCertified == false){counter++;}
+        if(users[givenAddress].joinChatCertified == false){counter++;}
+        if(users[givenAddress].messageCertified == false){counter++;}
+        if(users[givenAddress].nicknameCertified == false){counter++;}
+        
+        if(counter == 0){
+            return "Congratulations! You completed all tasks.";
+        }else{
+            string memory output = string(abi.encodePacked("You still have ", uint2str(counter), " task/s to do. Check the progress at 'users' by entering your address."));
+            return output;
+        }
+    }
+    
+    /*
+        Hilfsfunktionen
+    */
+    
+    //Überprüfung ob ein Mitglied ein Admin ist.
+    function isAdminOfChat(uint givenChatID, address givenAddress) view internal modMemberOfChat(givenChatID, givenAddress) returns (bool isAdmin){
+        uint adminIndex = 1;
+        while(adminIndex <= chats[givenChatID].adminCounter) {
+            if(chats[givenChatID].admins[adminIndex] == givenAddress){
+                return true;
+            }
+            adminIndex += 1;
+        }
+        return false;
+    }
+    
+    //Überprüfung ob eine Adresse Mitglied eines Chats ist.
+    function isInChat(uint givenChatID, address givenMember) view internal returns(bool isMember) {
+        uint memberIndex = 1;
+        while(memberIndex <= chats[givenChatID].memberCounter) {
+            if(chats[givenChatID].members[memberIndex] == givenMember){
+                return true;
+            }
+            memberIndex += 1;
+        }
+        return false;
+    }
+    
+    // Funktion um aus einer Adresse einen String zu produzieren
+    function addressToString(address _addr) internal pure returns(string memory) {
+        bytes32 value = bytes32(uint256(_addr));
+        bytes memory alphabet = "0123456789abcdef";
+    
+        bytes memory str = new bytes(42);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint i = 0; i < 20; i++) {
+            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
+            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
+        }
+        return string(str);
     }
     
     // Funktion um aus einem uint einen String zu produzieren
@@ -330,17 +318,61 @@ contract Messenger {
         return string(bstr);
     }
     
-    
-    function isCertified(address givenAddress) view public returns (bool) {
+    function getProgress() pure internal returns (string memory) {
         
-        return users[givenAddress].isCertified;
+        string memory output = "";
         
+        /*if(isCertified(msg.sender) == true){
+            output = "Congratulations! You completed all tasks.";
+        }
+        else{
+            output = "Fortschritt: \n";
+            output = string(abi.encodePacked(output, "Create chat 0: ", getBool(users[msg.sender].createChatCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Join chat 0: ", getBool(users[msg.sender].joinChatCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Create message in chat 0: ", getBool(users[msg.sender].messageCertified), " | \n"));
+            output = string(abi.encodePacked(output, "Set nickname: ", getBool(users[msg.sender].nicknameCertified)));
+        }
+        */
+        return output;
     }
     
-    function certifyUser() internal {
+    function getBool(bool keyBool) pure internal returns (string memory) {
         
-        users[msg.sender].isCertified = true;
-        
+        if(keyBool){
+            return "Done!";
+        }
+        return "To do.";
     }
     
+    /*
+         Modifier
+    */
+    
+    //Überprüfung ob es bereits einen Chat mit der gegebenen ChatID gibt.
+    modifier modChatID (uint givenChatID){
+        require(givenChatID < chatCounter, "The given ChatID doens't exist yet!");
+        _;
+    }
+    
+    //Überprüfung ob der Sender oder die übergebene Adresse der Transaktion in dem gegebenen Chat ist.
+    modifier modMemberOfChat(uint givenChatID, address givenAddress){
+        if(givenAddress == msg.sender){
+            require(isInChat(givenChatID, msg.sender), "You aren't a member of this chat!");
+            _;
+        }else{
+            require(isInChat(givenChatID, givenAddress), "The given Address isn't a member of this chat!"); 
+            _;
+        }
+    }
+    
+    //Überprüfung ob der Sender oder die in der Transaktion übergebene Adresse ein Admin des gegebenen Chats ist.
+    modifier modAdminOfChat(uint givenChatID, address givenAddress){
+        if(givenAddress == msg.sender){
+           require(isAdminOfChat(givenChatID, msg.sender), "You aren't a admin of this chat!");
+            _; 
+        }else{
+            require(isAdminOfChat(givenChatID, givenAddress) == false, "The given Address is already a Admin!");
+            _;
+        }
+    }
 }
