@@ -22,11 +22,6 @@ contract Messenger {
         bool nicknameCertified;
     }
     
-    struct user{
-        string nickname;
-        bool isCertified;
-    }
-    
     struct message {
         string text;
         address author;
