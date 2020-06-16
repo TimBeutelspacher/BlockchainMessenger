@@ -48,7 +48,7 @@ contract Messenger {
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
         
-        users[msg.sender].createChatCertified = true
+        users[msg.sender].createChatCertified = true;
         
         if(chatCounter == 0){
             users[msg.sender].joinChatCertified = true;
