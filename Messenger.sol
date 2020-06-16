@@ -4,7 +4,7 @@ pragma solidity >=0.4.0 <0.7.0;
 contract Messenger {
     
     /*
-        Globale Variablen
+        Variablen
     */
     uint chatCounter = 0;
     mapping(uint => chat) internal chats;  
@@ -48,7 +48,12 @@ contract Messenger {
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
         
-        users[msg.sender].createChatCertified = true;
+        users[msg.sender].createChatCertified = true
+        
+        if(chatCounter == 0){
+            users[msg.sender].joinChatCertified = true;
+        }
+        
         chatCounter += 1;
     }
     
@@ -313,32 +318,7 @@ contract Messenger {
         return string(bstr);
     }
     
-    function getProgress() pure internal returns (string memory) {
-        
-        string memory output = "";
-        
-        /*if(isCertified(msg.sender) == true){
-            output = "Congratulations! You completed all tasks.";
-        }
-        else{
-            output = "Fortschritt: \n";
-            output = string(abi.encodePacked(output, "Create chat 0: ", getBool(users[msg.sender].createChatCertified), " | \n"));
-            output = string(abi.encodePacked(output, "Join chat 0: ", getBool(users[msg.sender].joinChatCertified), " | \n"));
-            output = string(abi.encodePacked(output, "Create message in chat 0: ", getBool(users[msg.sender].messageCertified), " | \n"));
-            output = string(abi.encodePacked(output, "Set nickname: ", getBool(users[msg.sender].nicknameCertified)));
-        }
-        */
-        return output;
-    }
-    
-    function getBool(bool keyBool) pure internal returns (string memory) {
-        
-        if(keyBool){
-            return "Done!";
-        }
-        return "To do.";
-    }
-    
+   
     /*
          Modifier
     */
