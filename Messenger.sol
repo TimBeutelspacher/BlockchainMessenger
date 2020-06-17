@@ -9,7 +9,7 @@ contract Messenger {
     uint chatCounter = 0;
     mapping(uint => chat) internal chats;  
     mapping(address => user) public users;
-    string private keyword = "Currywurst";
+    string private keyword = "HDMBlockchain20";
     
     /*
         Objekt-Strukturen
@@ -49,11 +49,9 @@ contract Messenger {
         chats[chatCounter].admins[1] = msg.sender;
         
         users[msg.sender].createChatCertified = true;
-        
         if(chatCounter == 0){
             users[msg.sender].joinChatCertified = true;
         }
-        
         chatCounter += 1;
     }
     
@@ -318,7 +316,6 @@ contract Messenger {
         return string(bstr);
     }
     
-   
     /*
          Modifier
     */
