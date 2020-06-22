@@ -1,5 +1,7 @@
 pragma solidity >=0.4.0 <0.7.0;
 
+import "./Message.sol";
+import "./Certificate.sol";
 
 contract Messenger {
     
@@ -9,8 +11,11 @@ contract Messenger {
     uint chatCounter = 0;
     mapping(uint => chat) internal chats;  
     mapping(address => user) public users;
+    mapping(address => Certificate) internal certificates;
     string private keyword = "HDMBlockchain20";
+    Message[] public allMessages;
     
+
     /*
         Objekt-Strukturen
     */
@@ -20,11 +25,7 @@ contract Messenger {
         bool createChatCertified;
         bool joinChatCertified;
         bool nicknameCertified;
-    }
-    
-    struct message {
-        string text;
-        address author;
+        bool certified;
     }
     
     struct chat {
@@ -32,7 +33,7 @@ contract Messenger {
         uint messageCounter;
         uint memberCounter;
         uint adminCounter;
-        mapping(uint => message) messages;
+        Message[] messages;
         mapping(uint => address) members;
         mapping(uint => address) admins;
     }
@@ -43,45 +44,53 @@ contract Messenger {
     
     // Funktion um einen öffentlichen Chat zu erstellen
     function createChat() public{
-        chat memory newChat = chat(chatCounter,0,1,1);
+        Message[] memory messages;
+        chat memory newChat = chat(chatCounter,0,1,1, messages);
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
         
         users[msg.sender].createChatCertified = true;
+        createCertificate();
+        
         if(chatCounter == 0){
             users[msg.sender].joinChatCertified = true;
         }
+        
         chatCounter += 1;
     }
     
     // Funktion um eine Nachricht in einem Chat zu erstellen
-    function createMessage(uint givenChatID, string memory givenText) public modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender){
-        if((keccak256(abi.encodePacked((givenText))) == keccak256(abi.encodePacked((keyword)))) && (givenChatID == 0)) {
+    function createMessage(uint _chatID, string memory _message) public modChatID(_chatID) modMemberOfChat(_chatID, msg.sender) {
+        if((keccak256(abi.encodePacked((_message))) == keccak256(abi.encodePacked((keyword)))) && (_chatID == 0)) {
             users[msg.sender].messageCertified = true;
+            createCertificate();
         }
         
-        message memory newMessage = message(givenText, msg.sender);
-        chats[givenChatID].messages[chats[givenChatID].messageCounter] = newMessage;
-        chats[givenChatID].messageCounter += 1;
+        Message message = new Message(_chatID, _message, msg.sender);
+        
+        chats[_chatID].messages.push(message);
+        chats[_chatID].messageCounter += 1;
+        allMessages.push(message);
+        
     }
     
     // Funktion um alle Nachrichten geordnet aus einem Chat auszulesen
-    function getAllMessages(uint givenChatID) public view modChatID(givenChatID) modMemberOfChat(givenChatID, msg.sender) returns(string memory){
-        require(chats[givenChatID].messageCounter != 0, "There isn't a message in this chat!");
+    function getAllMessages(uint _chatID) public view modChatID(_chatID) modMemberOfChat(_chatID, msg.sender) returns(string memory){
+        require(chats[_chatID].messageCounter != 0, "There isn't a message in this chat!");
         
         string memory output;
         string memory currentMessage;
         string memory currentAuthor;
         
-        for(uint i = 0; i < chats[givenChatID].messageCounter; i++){
+        for(uint i = 0; i < chats[_chatID].messageCounter; i++){
             
-            currentMessage = chats[givenChatID].messages[i].text;
+            currentMessage = chats[_chatID].messages[i].message();
             
-            currentAuthor = users[chats[givenChatID].messages[i].author].nickname;
+            currentAuthor = users[chats[_chatID].messages[i].author()].nickname;
             
             if(keccak256(abi.encodePacked((currentAuthor))) == keccak256(abi.encodePacked(("")))){
-                currentAuthor = addressToString(chats[givenChatID].messages[i].author);
+                currentAuthor = addressToString(chats[_chatID].messages[i].author());
             }
             
             output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessage, '\n'));
@@ -140,6 +149,7 @@ contract Messenger {
         
         if(givenChatID == 0){
             users[msg.sender].joinChatCertified = true;
+            createCertificate();
         }
         
         chats[givenChatID].memberCounter += 1;
@@ -150,6 +160,7 @@ contract Messenger {
     function setNickname(string memory givenNickname) public {
         users[msg.sender].nickname = givenNickname;
         users[msg.sender].nicknameCertified = true;
+        createCertificate();
     }
     
     //Funktion um ein Mitglied zu einem Admin eines Chats zu machen.
@@ -246,10 +257,29 @@ contract Messenger {
         if(users[givenAddress].nicknameCertified == false){counter++;}
         
         if(counter == 0){
-            return "Congratulations! You completed all tasks.";
+            return string(abi.encodePacked("Congratulations! Your certificate has been created at this address: ", addressToString(address(certificates[msg.sender]))));
         }else{
             string memory output = string(abi.encodePacked("You still have ", uint2str(counter), " task/s to do. Check the progress at 'users' by entering your address."));
             return output;
+        }
+    }
+    
+    function createCertificate() internal{
+        uint counter = 0;
+        
+        if(users[msg.sender].createChatCertified == false){counter++;}
+        if(users[msg.sender].joinChatCertified == false){counter++;}
+        if(users[msg.sender].messageCertified == false){counter++;}
+        if(users[msg.sender].nicknameCertified == false){counter++;}
+        
+        if(counter == 0){
+            if(!users[msg.sender].certified){
+                
+                Certificate certificate = new Certificate(users[msg.sender].nickname, addressToString(msg.sender));
+                certificates[msg.sender] = certificate;
+                
+                users[msg.sender].certified = true;
+            }
         }
     }
     
@@ -316,6 +346,7 @@ contract Messenger {
         return string(bstr);
     }
     
+   
     /*
          Modifier
     */
