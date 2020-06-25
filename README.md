@@ -20,3 +20,4 @@ Weitere Ideen:
 - Gemeinschaftskonto je Chat
 - Nickname erforderlich?!
 - Verschlüsselung einarbeiten
+- Wenn man einen Chat erstellt soll die erzeugte ChatID ausgegeben wird.
