@@ -4,10 +4,12 @@ contract Message{
     address public author;
     string public message;
     uint public chatID;
+    address public prevMessage;
 
-    constructor(uint _chatID, string memory _message, address _author) public {
-        author = _author;
-        message = _message;
+    constructor(uint _chatID, string memory _message, address _author, address _prevMessage) public {
         chatID = _chatID;
+        message = _message;
+        author = _author;
+        prevMessage = _prevMessage;
     }
 }
