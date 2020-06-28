@@ -2,6 +2,7 @@ pragma solidity >=0.4.0 <0.7.0;
 
 import "./Message.sol";
 import "./Certificate.sol";
+import "./InitMessage.sol";
 
 contract Messenger {
     
@@ -30,10 +31,10 @@ contract Messenger {
     
     struct chat {
         uint chatID;
-        uint messageCounter;
         uint memberCounter;
         uint adminCounter;
-        Message[] messages;
+        address latestMessage;
+        address initalMessage;
         mapping(uint => address) members;
         mapping(uint => address) admins;
     }
@@ -44,11 +45,17 @@ contract Messenger {
     
     // Funktion um einen öffentlichen Chat zu erstellen
     function createChat() public{
-        Message[] memory messages;
-        chat memory newChat = chat(chatCounter,0,1,1, messages);
+        
+        string memory firstText = string(abi.encodePacked("Welcome to chat ", uint2str(chatCounter), "."));
+        
+        // Initialen Message-Contract deployen
+        initMessage firstMessage = new initMessage(chatCounter, firstText, msg.sender);
+        
+        chat memory newChat = chat(chatCounter,1,1, address(firstMessage), address(firstMessage));
         chats[chatCounter] = newChat;
         chats[chatCounter].members[1] = msg.sender;
         chats[chatCounter].admins[1] = msg.sender;
+        
         
         users[msg.sender].createChatCertified = true;
         createCertificate();
@@ -67,34 +74,41 @@ contract Messenger {
             createCertificate();
         }
         
-        Message message = new Message(_chatID, _message, msg.sender);
+        Message message = new Message(_chatID, _message, msg.sender, chats[_chatID].latestMessage);
         
-        chats[_chatID].messages.push(message);
-        chats[_chatID].messageCounter += 1;
+        chats[_chatID].latestMessage = address(message);
+        
         allMessages.push(message);
-        
     }
     
     // Funktion um alle Nachrichten geordnet aus einem Chat auszulesen
     function getAllMessages(uint _chatID) public view modChatID(_chatID) modMemberOfChat(_chatID, msg.sender) returns(string memory){
-        require(chats[_chatID].messageCounter != 0, "There isn't a message in this chat!");
         
         string memory output;
-        string memory currentMessage;
+        string memory currentMessageText;
         string memory currentAuthor;
+        address currentMessageAddress = chats[_chatID].latestMessage;
         
-        for(uint i = 0; i < chats[_chatID].messageCounter; i++){
+        Message currentMessage = Message(currentMessageAddress);
             
-            currentMessage = chats[_chatID].messages[i].message();
+        while(currentMessageAddress != chats[_chatID].initalMessage){
             
-            currentAuthor = users[chats[_chatID].messages[i].author()].nickname;
+            currentMessageText = currentMessage.message();
+            currentAuthor = users[currentMessage.author()].nickname;
             
             if(keccak256(abi.encodePacked((currentAuthor))) == keccak256(abi.encodePacked(("")))){
-                currentAuthor = addressToString(chats[_chatID].messages[i].author());
+                currentAuthor = addressToString(currentMessage.author());
             }
             
-            output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessage, '\n'));
+            output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessageText, '\n'));
+            currentMessageAddress = currentMessage.prevMessage();
+            currentMessage = Message(currentMessage.prevMessage());
         }
+        
+        if(currentMessageAddress == chats[_chatID].initalMessage){
+            output = string(abi.encodePacked(output, initMessage(chats[_chatID].initalMessage).message()));
+        }
+        
         return output;
     }
     
