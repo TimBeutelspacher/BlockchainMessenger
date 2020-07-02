@@ -1,18 +1,22 @@
 pragma solidity ^0.6.6;
 
 import "./Messenger.sol";
+import "./AllUsers.sol";
 
 contract Message {
     
     //Variablen
     Messenger private messenger;
-    string private value;
-    address public author;
+    AllUsers private users;
+    string public text;
+    address private author;
     address private previousMessage;
     
-    constructor(Messenger _messenger, string memory _value, address _author, address _previousMessage) public{
+    //Konstruktor
+    constructor(Messenger _messenger, AllUsers _users, string memory _text, address _author, address _previousMessage) public{
         messenger = _messenger;
-        value = _value;
+        users = _users;
+        text = _text;
         author = _author;
         previousMessage = _previousMessage;
     }
@@ -23,16 +27,29 @@ contract Message {
         return previousMessage;
     }
     
-    //Funktion um sich den Nicknamen des Authors und die Nachricht ausgeben zu lassen.
-    function getMessage() public view returns(string memory){
+    //Funktion, welche die Adresse des Autors und desen Nicknamen (falls vorhanden) ausgibt.
+    function getAuthor() public view returns(string memory){
         string memory output;
-        string memory a;
-        if (keccak256(abi.encodePacked((messenger.getNickname(author)))) == keccak256(abi.encodePacked((a)))){
-            a = "NoName";
-        }else{
-            a = messenger.getNickname(author);
+        string memory nickname = users.getNickname(author);
+        if (keccak256(abi.encodePacked((nickname))) == keccak256(abi.encodePacked(("")))){
+            nickname = "NoName";
         }
-        output = string(abi.encodePacked(a, ': ', value));
+        output = string(abi.encodePacked(addressToString(author), " (", nickname, ")"));
         return output;
     }
+    
+    // Funktion um aus einer Adresse einen String zu produzieren
+    function addressToString(address _addr) private pure returns(string memory) {
+        bytes32 value = bytes32(uint256(_addr));
+        bytes memory alphabet = "0123456789abcdef";
+    
+        bytes memory str = new bytes(42);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint i = 0; i < 20; i++) {
+            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
+            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
+        }
+        return string(str);
+    } 
 }
