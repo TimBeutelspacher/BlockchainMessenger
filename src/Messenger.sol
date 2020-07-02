@@ -1,20 +1,24 @@
 pragma solidity ^0.6.6;
 
 import "./Chat.sol";
-import "./User.sol";
+import "./AllUsers.sol";
 
 contract Messenger {
     
     //Variablen
     uint private chatCounter = 0;
     mapping (uint => Chat) private chats;
-    mapping (address => User) private userMap;
+    AllUsers private users;
+    
+    constructor()public{
+        users = new AllUsers();
+    }
     
     //Funktion zum erstellen eines Chats
-    function createChat() public returns(address){
-        Chat chat = new Chat(this);
+    function createChat() public{
+        Chat chat = new Chat(this, users, chatCounter);
         chats[chatCounter++] = chat;
-        return address(chats[chatCounter - 1]);
+        users.setCreateChatCertified(msg.sender);
     }
     
     //Funktion um sich die Addresse eines Chats ausgeben zu lassen.
@@ -23,15 +27,21 @@ contract Messenger {
         return address(chats[_chatId]);
     }
     
-    //Funktion um sich einen Nicknamen zu erstellen.
-    function setNickname(string memory _nickname) public{
-        User user = new User();
-        user.setNickname(_nickname);
-        userMap[msg.sender] = user;
+    //Funktion um die Chat ID des am letzten erstellten Chats auszugeben.
+    function getLastChatID() public view returns(uint){
+        require(chatCounter > 0, "Nobody created a chat yet!");
+        return chatCounter - 1;
     }
     
-    //Funktion um den Nicknamen eines Users ausgeben zu lassen.
-    function getNickname(address _address)public view returns(string memory){
-        return userMap[_address].getNickname();
+    //Funktion, welcher die Adresse des Zertifikats ausgibt, falls die übergebene Adresse
+    //alle Aufgaben erfüllt hat.
+    function getCertificate(address _author)public view returns(address){
+        return users.getCertificate(_author);
+    }
+    
+    //Funktion um sich einen Nicknamen zu erstellen.
+    function setNickname(string memory _nickname) public{
+        users.setNickname(msg.sender, _nickname);
+        users.setNicknameCertified(msg.sender);
     }
 }
