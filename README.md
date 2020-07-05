@@ -5,6 +5,6 @@ Des Weiteren haben wir einen Smart Contract erstellt, welcher als Zertifikat die
   - Chatraum erstellen.
   - Sich einen Nicknamen geben.
   - Dem Chat mit der ChatID 0 beitreten.
-  - In den Chat mit der ChatID 0 die Nachricht mit dem Schlüsselwort schreiben.
+  - In den Chat mit der ChatID 0 eine Nachricht mit dem Schlüsselwort schreiben.
 
 Eine einfachere Version des Messengers mit nur einem Chatraum liegt unter https://github.com/TimBeutelspacher/BasicBlockchainMessenger.
