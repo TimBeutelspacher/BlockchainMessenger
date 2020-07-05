@@ -23,7 +23,7 @@ contract Message {
     
     //Funktion um die vorherige Nachricht in diesem Chat sich geben zu lassen.
     function getPreviousMessage() public view returns(address){
-        require(previousMessage  != 0x0000000000000000000000000000000000000000, "This is the first message of this chat!");
+        //require(previousMessage  != 0x0000000000000000000000000000000000000000, "This is the first message of this chat!");
         return previousMessage;
     }
     
