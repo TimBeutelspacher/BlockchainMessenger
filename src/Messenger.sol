@@ -44,4 +44,47 @@ contract Messenger {
         users.setNickname(msg.sender, _nickname);
         users.setNicknameCertified(msg.sender);
     }
+    
+    function getMyChats() public view returns(string memory){
+        
+        string memory output = "";
+        
+        Chat tempChat;
+        for(uint i = 0; i < chatCounter; i++){
+            
+            tempChat = chats[i];
+            
+            if(tempChat.isInChat(msg.sender)){
+                
+                 output = string(abi.encodePacked(output, "ChatID: ", uint2str(i), " | "));
+                 output = string(abi.encodePacked(output, "\n"));
+            }
+        }
+        
+        if(keccak256(abi.encodePacked((output))) == keccak256(abi.encodePacked(("")))){
+            output = "You are in no group yet!";
+        }
+        
+        return output;
+    }
+    
+        // Funktion um aus einem uint einen String zu produzieren
+    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint j = _i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint k = len - 1;
+        while (_i != 0) {
+            bstr[k--] = byte(uint8(48 + _i % 10));
+            _i /= 10;
+        }
+        return string(bstr);
+    }
 }
