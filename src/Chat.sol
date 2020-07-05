@@ -35,7 +35,7 @@ contract Chat {
         Message message = new Message(messenger, users, _message, msg.sender, latestMessage);
         latestMessage = address(message);
         
-        if(keccak256(abi.encodePacked(_message)) == keccak256(abi.encodePacked("HdM")) && chatID == 0) {
+        if(keccak256(abi.encodePacked(_message)) == keccak256(abi.encodePacked("HdMBlockchain20")) && chatID == 0) {
             users.setMessageCertified(msg.sender);
         }
     }
@@ -47,8 +47,7 @@ contract Chat {
     }
     
     //Überprüfung ob eine Adresse Mitglied eines Chats ist.
-    function isInChat(address _address) private view returns(bool isMember) {
-        require (memberCounter > 0, "This chat has 0 members!");
+    function isInChat(address _address) public view returns(bool isMember) {
         uint memberIndex = 0;
         while(memberIndex < memberCounter) {
             if(members[memberIndex] == _address){
@@ -58,4 +57,35 @@ contract Chat {
         }
         return false;
     }
+    
+     // Funktion um alle Nachrichten geordnet aus einem Chat auszulesen
+    function getAllMessages() public view returns(string memory){
+        require (isInChat(msg.sender), "You aren't a member of this chat!");
+        require(latestMessage != 0x0000000000000000000000000000000000000000, "There isn't a message in this chat!");
+        
+        
+        string memory output;
+        string memory currentMessageText;
+        string memory currentAuthor;
+        address currentMessageAddress = latestMessage;
+        
+        Message currentMessage = Message(currentMessageAddress);
+            
+        while(currentMessageAddress != 0x0000000000000000000000000000000000000000){
+            
+            currentMessageText = currentMessage.text();
+            currentAuthor = currentMessage.getAuthor();
+            
+            output = string(abi.encodePacked(output, currentAuthor, ': ', currentMessageText, '\n'));
+            
+            currentMessageAddress = currentMessage.getPreviousMessage();
+            currentMessage = Message(currentMessage.getPreviousMessage());
+        }
+        
+        return output;
+    }
+    
+    
+    
+    
 }
