@@ -13,10 +13,4 @@ contract Message {
         author = _author;
         previousMessage = _previousMessage;
     }
-    
-    //Funktion um die vorherige Nachricht in diesem Chat sich geben zu lassen.
-    function getPreviousMessage() public view returns(address){
-        require(previousMessage  != 0x0000000000000000000000000000000000000000, "This is the first message of this chat!");
-        return previousMessage;
-    }
 }
