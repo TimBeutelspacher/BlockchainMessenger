@@ -41,7 +41,6 @@ contract Chat {
         
         string memory output;
         string memory currentMessageText;
-        string memory currentAuthorString;
         address currentMessageAddress = latestMessage;
         address currentAuthor;
         
@@ -50,10 +49,9 @@ contract Chat {
         while(currentMessageAddress != 0x0000000000000000000000000000000000000000){
             
             currentMessageText = currentMessage.text();
-            currentAuthorString = addressToString(currentMessage.author());
             currentAuthor = currentMessage.author();
             
-            output = string(abi.encodePacked(output, currentAuthorString," (", messenger.getNickname(currentAuthor),  '): ', currentMessageText, '\n'));
+            output = string(abi.encodePacked(output, messenger.getNickname(currentAuthor),  ": ", currentMessageText, " | "));
             
             currentMessageAddress = currentMessage.previousMessage();
             currentMessage = Message(currentMessage.previousMessage());
@@ -73,19 +71,4 @@ contract Chat {
         }
         return false;
     }
-    
-    // Funktion um aus einer Adresse einen String zu produzieren
-    function addressToString(address _addr) private pure returns(string memory) {
-        bytes32 value = bytes32(uint256(_addr));
-        bytes memory alphabet = "0123456789abcdef";
-    
-        bytes memory str = new bytes(42);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < 20; i++) {
-            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
-        }
-        return string(str);
-    } 
 }
