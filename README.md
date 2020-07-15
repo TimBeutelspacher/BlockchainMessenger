@@ -6,5 +6,7 @@ Des Weiteren haben wir einen Smart Contract erstellt, welcher als Zertifikat die
   - Sich einen Nicknamen geben.
   - Dem Chat mit der ChatID 0 beitreten.
   - In den Chat mit der ChatID 0 eine Nachricht mit dem Schlüsselwort schreiben.
+  
+  Kovan Testnet: 0xB3A966759B2FF32F779A9B36540441Ef0063B7DE
 
 Eine einfachere Version des Messengers mit nur einem Chatraum liegt unter https://github.com/TimBeutelspacher/BasicBlockchainMessenger.
